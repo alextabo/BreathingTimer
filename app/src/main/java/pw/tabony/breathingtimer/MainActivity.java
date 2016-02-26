@@ -43,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
     long ttimeInMilliseconds = 0L;
     long ttimeSwapBuff = 0L;
     long tupdatedTime = 0L;
-    long longestRetTime = 0L;
+    int longestRetTime = 0;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -70,7 +70,6 @@ public class MainActivity extends AppCompatActivity {
                     cycleHandler.postDelayed(updateTimerThread, 0);
                     if (resetTime > 0){
                         times[2] = (int) (long) (resetTime/1000);
-                        if (rTime > longestRetTime) longestRetTime = rTime;
                     } else {
                         tstartTime = SystemClock.uptimeMillis();
                         timeHandler.postDelayed(updateTimerThread, 0);
@@ -93,6 +92,7 @@ public class MainActivity extends AppCompatActivity {
                     times[1] = (int) (long) (updatedTime/1000);
                     rResult.setText("" + times[1] + "s");
                     cycleNum++;
+                    if (times[1] > longestRetTime) longestRetTime = times[1];
                     cycle.setText("" + cycleNum);
                     nextState = "init";
                 } else {
@@ -109,14 +109,18 @@ public class MainActivity extends AppCompatActivity {
                 TextView sumCycles = (TextView) findViewById(R.id.sumCycles);
                 TextView sumLongestRetention = (TextView) findViewById(R.id.sumLongestRetention);
 
-                int tsecs = (int) (longestRetTime / 1000);
+                int tsecs = (int) (tupdatedTime / 1000);
                 int tmins = tsecs / 60;
                 tsecs = tsecs % 60;
                 sumTotalTime.setText("" + tmins + ":" + String.format("%02d", tsecs));
 
                 sumCycles.setText("" + cycleNum);
-                int longest = 12;
-                sumLongestRetention.setText("" + longest);
+
+                //int secsFormat = (int) (longestRetTime / 1000);
+                tmins = longestRetTime / 60;
+                tsecs = longestRetTime % 60;
+                sumLongestRetention.setText("" + tmins + ":" + String.format("%02d", tsecs) + " / " + longestRetTime + "s");
+
             }
         });
 
