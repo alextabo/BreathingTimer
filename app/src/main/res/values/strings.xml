@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">Breathing Timer</string>
     <string name="action_settings">Settings</string>
+    <string name="action_about">About</string>
     <string name="initTip"> </string>
     <string name="initTime">Tap to Start</string>
     <string name="blank">--</string>
