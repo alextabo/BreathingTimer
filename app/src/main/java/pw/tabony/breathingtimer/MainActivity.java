@@ -14,36 +14,36 @@ import android.widget.TextView;
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
+    /* The state of this app are
+        1) init = app just started, start timer etc
+        2) breathing = breathing phase
+        3) retention = retention phase
+        4) reset = time before starting breathing again or finishing to summary
+        5) summary = summary page - back button returns to timer but it broken and resets times */
 
-    String nextState = "init";
-    int cycleNum = 0;
-    long bTime = 0L;
-    long rTime = 0L;
-    long resetTime = 0L;
-    long totalTime = 0L;
-    Integer[] times = new Integer[3];
-    ArrayList<Integer[]> sessions = new ArrayList<>();
+    private boolean init = true;
+    private String nextState;           //Indicates what the next phase is
+
+    private int cycleNum = 0;           //Number of breathing cycles done so far
+    private int phaseTimeInSecs = 0;    //Last retention time
+    private int sessionTimeInSecs = 0;  //Length of total session
+    private long phaseStartTime = 0L;   //Starting time of each phase
+    private long sessionStartTime = 0L; //Starting time for entire session
+    private int longestRetTime = 0;     //Kinda obvious, no?
+
+    //private long ttimeSwapBuff = 0L;
+    //private long tupdatedTime = 0L;
+
+    private Integer[] times = new Integer[3]; //Stored arrays of times
+    private ArrayList<Integer[]> sessions = new ArrayList<>(); //breathing time, retention time, reset time
 
     private TextView time;
-    private TextView tTime;
+    private TextView totalTime;
     private TextView tip;
     private TextView cycle;
-    private Button finished;
-
-    private long startTime = 0L;
-    private long tstartTime = 0L;
-
-    private Handler cycleHandler = new Handler();
-    private Handler timeHandler = new Handler();
-
-    long timeInMilliseconds = 0L;
-    long timeSwapBuff = 0L;
-    long updatedTime = 0L;
-
-    long ttimeInMilliseconds = 0L;
-    long ttimeSwapBuff = 0L;
-    long tupdatedTime = 0L;
-    int longestRetTime = 0;
+    
+    private Handler cycleHandler = new Handler(); // Timer for main screen
+    private Handler timeHandler = new Handler(); // Timer for total session time
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -54,75 +54,103 @@ public class MainActivity extends AppCompatActivity {
 
         time = (TextView) findViewById(R.id.time);
         cycle = (TextView) findViewById(R.id.cycle);
-        tTime = (TextView) findViewById(R.id.totalTime);
+        totalTime = (TextView) findViewById(R.id.totalTime);
         tip = (TextView) findViewById(R.id.tip);
         final TextView rResult = (TextView) findViewById(R.id.rResult);
-        finished = (Button) findViewById(R.id.finished);
+        final Button finished = (Button) findViewById(R.id.finished);
 
         time.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
-                if(nextState.equals("init")){
+                if(init){
+                    sessionStartTime = SystemClock.uptimeMillis(); //Start session
+                    timeHandler.postDelayed(updateTimerThread, 0);
                     nextState = "breathing";
-                    time.setTextSize(40);
-                    time.setText("Breath");
-                    tip.setText("Tap when done");
-                    startTime = SystemClock.uptimeMillis();
-                    cycleHandler.postDelayed(updateTimerThread, 0);
-                    if (resetTime > 0){
-                        times[2] = (int) (long) (resetTime/1000);
-                    } else {
-                        tstartTime = SystemClock.uptimeMillis();
-                        timeHandler.postDelayed(updateTimerThread, 0);
-                    }
-                } else if (nextState.equals("breathing")){
-                    nextState = "reset";
-                    time.setTextSize(80);
-                    tip.setText("(retention)");
-                    times[0] = (int) (long) (updatedTime/1000);
-                    startTime = SystemClock.uptimeMillis();
-                    cycleHandler.postDelayed(updateTimerThread, 0);
-                } else if (nextState.equals("reset")){
-                    rTime = updatedTime;
-                    startTime = SystemClock.uptimeMillis();
-                    cycleHandler.postDelayed(updateTimerThread, 0);
-                    time.setTextSize(40);
-                    time.setText("Restart");
-                    tip.setText("Tap to restart");
-                    resetTime = updatedTime;
-                    times[1] = (int) (long) (updatedTime/1000);
-                    rResult.setText("" + times[1] + "s");
-                    cycleNum++;
-                    if (times[1] > longestRetTime) longestRetTime = times[1];
-                    cycle.setText("" + cycleNum);
-                    nextState = "init";
+                    init = false;
                 } else {
-                    //huh?
-                    tip.setText("Something wrong...");
+                    //Not init? Must be a reset then - grab reset time
+                    times[2] = phaseTimeInSecs;
+                    // Save times array into arraylist... someday
+                }
+                if (nextState.equals("breathing")){
+                    //We are breathing now
+                    phaseStartTime = SystemClock.uptimeMillis(); //start breathing phase timer
+                    cycleHandler.postDelayed(updateTimerThread, 0);
+                    time.setText("");
+                    time.setTextSize(60);
+                    time.setText("breathe");
+                    tip.setText("Tap when done");
+                    nextState = "retention";
+                } else if (nextState.equals("retention")){
+                    //We are starting retention
+                    times[0] = phaseTimeInSecs; //Get breathing phase time
+
+                    phaseStartTime = SystemClock.uptimeMillis(); //Restart phase timer
+                    cycleHandler.postDelayed(updateTimerThread, 0);
+
+                    time.setText("");
+                    time.setTextSize(120); //Big timer!
+                    tip.setText("(retention)");
+                    nextState = "reset";
+                } else if (nextState.equals("reset")){
+                    //We are in reset mode - new cycle or finish
+                    times[1] = phaseTimeInSecs; //Get retention phase time
+                    if (times[1] > longestRetTime) longestRetTime = times[1];
+
+                    phaseStartTime = SystemClock.uptimeMillis();
+                    cycleHandler.postDelayed(updateTimerThread, 0);
+                    time.setText("");
+                    time.setTextSize(60);
+                    time.setText("restart");
+                    tip.setText("Tap to restart");
+                    rResult.setText(String.format("%ds", times[1]));
+
+                    cycle.setText(String.format("%d", ++cycleNum));
+                    nextState = "breathing";
+                } else {
+                    //Transition from reset to breathing
+
+                    nextState = "breathing";
+                    phaseStartTime = SystemClock.uptimeMillis();
+                    cycleHandler.postDelayed(updateTimerThread, 0);
                 }
             }
         });
         finished.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
-                setContentView(R.layout.summary_main);
+                if (nextState.equals("breathing")) {
+                    setContentView(R.layout.summary_main);
+                    nextState = "summary";
+                    TextView sumTotalTime = (TextView) findViewById(R.id.sumTotalTime);
+                    TextView sumCycles = (TextView) findViewById(R.id.sumCycles);
+                    TextView sumLongestRetention = (TextView) findViewById(R.id.sumLongestRetention);
 
-                TextView sumTotalTime = (TextView) findViewById(R.id.sumTotalTime);
-                TextView sumCycles = (TextView) findViewById(R.id.sumCycles);
-                TextView sumLongestRetention = (TextView) findViewById(R.id.sumLongestRetention);
+                    //Display session time
+                    int mins = sessionTimeInSecs / 60;
+                    int secs = sessionTimeInSecs % 60;
+                    sumTotalTime.setText(String.format("%d:%02d", mins, secs));
 
-                int tsecs = (int) (tupdatedTime / 1000);
-                int tmins = tsecs / 60;
-                tsecs = tsecs % 60;
-                sumTotalTime.setText("" + tmins + ":" + String.format("%02d", tsecs));
+                    //Display number of cycles - add longest cycle later
+                    sumCycles.setText(String.format("%d", cycleNum));
 
-                sumCycles.setText("" + cycleNum);
-
-                //int secsFormat = (int) (longestRetTime / 1000);
-                tmins = longestRetTime / 60;
-                tsecs = longestRetTime % 60;
-                sumLongestRetention.setText("" + tmins + ":" + String.format("%02d", tsecs) + " / " + longestRetTime + "s");
-
+                    //Display longest retention time
+                    mins = longestRetTime / 60;
+                    secs = longestRetTime % 60;
+                    sumLongestRetention.setText(String.format("%d:%02d / %ds", mins, secs, longestRetTime));
+                }
             }
         });
+
+    }
+    @Override
+    public void onBackPressed()
+    {
+        if(nextState.equals("summary")) {
+            setContentView(R.layout.activity_main);
+            //nextState = "breathing";
+        } else {
+            super.onBackPressed();
+        }
+
 
     }
     @Override
@@ -149,25 +177,25 @@ public class MainActivity extends AppCompatActivity {
     private Runnable updateTimerThread = new Runnable() {
 
         public void run() {
-            timeInMilliseconds = SystemClock.uptimeMillis() - startTime;
-            updatedTime = timeSwapBuff + timeInMilliseconds;
+            int secs, mins;
+            long ms;
 
-            int secs = (int) (updatedTime / 1000);
-            //int mins = secs / 60;
-            //secs = secs % 60;
-            int milliseconds = (int) (updatedTime % 1000);
-            if(nextState.equals("reset")) {
-                time.setText("" + secs);
-            }
+            //Update timer on main screen if retention phase
+            long phaseTimeInMs = SystemClock.uptimeMillis() - phaseStartTime;
+            // Why do we have these lines?
+            //long timeSwapBuff = 0L;
+            //updatedTime = timeSwapBuff + phaseTimeinMS;
+            phaseTimeInSecs = (int) (phaseTimeInMs / 1000);
+            if(nextState.equals("reset")) time.setText(String.format("%d", phaseTimeInSecs));
 
-
-            ttimeInMilliseconds = SystemClock.uptimeMillis() - tstartTime;
-            tupdatedTime = ttimeSwapBuff + ttimeInMilliseconds;
-
-            int tsecs = (int) (tupdatedTime / 1000);
-            int tmins = tsecs / 60;
-            tsecs = tsecs % 60;
-            tTime.setText("" + tmins + ":" + String.format("%02d", tsecs));
+            //Update total session time
+            ms = SystemClock.uptimeMillis() - sessionStartTime;
+            //As above, what purpose did/does this serve?
+            //tupdatedTime = ttimeSwapBuff + ms;
+            sessionTimeInSecs = (int) (ms / 1000);
+            mins = sessionTimeInSecs / 60;
+            secs = sessionTimeInSecs % 60;
+            totalTime.setText(String.format("%d:%02d", mins, secs));
 
             cycleHandler.postDelayed(this, 0);
         }
