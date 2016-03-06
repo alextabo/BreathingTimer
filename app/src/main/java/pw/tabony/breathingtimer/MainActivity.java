@@ -58,6 +58,7 @@ public class MainActivity extends AppCompatActivity {
         tip = (TextView) findViewById(R.id.tip);
         final TextView rResult = (TextView) findViewById(R.id.rResult);
         final Button finished = (Button) findViewById(R.id.finished);
+        finished.setVisibility(View.INVISIBLE);
 
         time.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
@@ -75,6 +76,7 @@ public class MainActivity extends AppCompatActivity {
                     //We are breathing now
                     phaseStartTime = SystemClock.uptimeMillis(); //start breathing phase timer
                     cycleHandler.postDelayed(updateTimerThread, 0);
+                    finished.setVisibility(View.INVISIBLE);
                     time.setText("");
                     time.setTextSize(60);
                     time.setText("breathe");
@@ -98,6 +100,7 @@ public class MainActivity extends AppCompatActivity {
 
                     phaseStartTime = SystemClock.uptimeMillis();
                     cycleHandler.postDelayed(updateTimerThread, 0);
+                    finished.setVisibility(View.VISIBLE);
                     time.setText("");
                     time.setTextSize(60);
                     time.setText("restart");
