@@ -30,6 +30,7 @@ public class MainActivity extends AppCompatActivity {
     private long phaseStartTime = 0L;   //Starting time of each phase
     private long sessionStartTime = 0L; //Starting time for entire session
     private int longestRetTime = 0;     //Kinda obvious, no?
+    private int longestCycle = 0;        //Which cycle had longest retention time
 
     //private long ttimeSwapBuff = 0L;
     //private long tupdatedTime = 0L;
@@ -62,7 +63,7 @@ public class MainActivity extends AppCompatActivity {
 
         time.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
-                if(init){
+                if (init) {
                     sessionStartTime = SystemClock.uptimeMillis(); //Start session
                     timeHandler.postDelayed(updateTimerThread, 0);
                     nextState = "breathing";
@@ -72,7 +73,7 @@ public class MainActivity extends AppCompatActivity {
                     times[2] = phaseTimeInSecs;
                     // Save times array into arraylist... someday
                 }
-                if (nextState.equals("breathing")){
+                if (nextState.equals("breathing")) {
                     //We are breathing now
                     phaseStartTime = SystemClock.uptimeMillis(); //start breathing phase timer
                     cycleHandler.postDelayed(updateTimerThread, 0);
@@ -82,7 +83,7 @@ public class MainActivity extends AppCompatActivity {
                     time.setText("breathe");
                     tip.setText("Tap when done");
                     nextState = "retention";
-                } else if (nextState.equals("retention")){
+                } else if (nextState.equals("retention")) {
                     //We are starting retention
                     times[0] = phaseTimeInSecs; //Get breathing phase time
 
@@ -93,21 +94,23 @@ public class MainActivity extends AppCompatActivity {
                     time.setTextSize(120); //Big timer!
                     tip.setText("(retention)");
                     nextState = "reset";
-                } else if (nextState.equals("reset")){
+                } else if (nextState.equals("reset")) {
                     //We are in reset mode - new cycle or finish
                     times[1] = phaseTimeInSecs; //Get retention phase time
-                    if (times[1] > longestRetTime) longestRetTime = times[1];
-
-                    phaseStartTime = SystemClock.uptimeMillis();
-                    cycleHandler.postDelayed(updateTimerThread, 0);
                     finished.setVisibility(View.VISIBLE);
                     time.setText("");
                     time.setTextSize(60);
                     time.setText("restart");
                     tip.setText("Tap to restart");
                     rResult.setText(String.format("%ds", times[1]));
-
                     cycle.setText(String.format("%d", ++cycleNum));
+                    if (times[1] > longestRetTime) {
+                        longestRetTime = times[1];
+                        longestCycle = cycleNum;
+                    }
+                    phaseStartTime = SystemClock.uptimeMillis();
+                    cycleHandler.postDelayed(updateTimerThread, 0);
+
                     nextState = "breathing";
                 } else {
                     //Transition from reset to breathing
@@ -124,21 +127,22 @@ public class MainActivity extends AppCompatActivity {
                     setContentView(R.layout.summary_main);
                     nextState = "summary";
                     TextView sumTotalTime = (TextView) findViewById(R.id.sumTotalTime);
-                    TextView sumCycles = (TextView) findViewById(R.id.sumCycles);
                     TextView sumLongestRetention = (TextView) findViewById(R.id.sumLongestRetention);
+                    TextView sumLongestCycle = (TextView) findViewById(R.id.sumLongestCycle);
 
-                    //Display session time
+                    //Display session time & number of cycles
                     int mins = sessionTimeInSecs / 60;
                     int secs = sessionTimeInSecs % 60;
-                    sumTotalTime.setText(String.format("%d:%02d", mins, secs));
-
-                    //Display number of cycles - add longest cycle later
-                    sumCycles.setText(String.format("%d", cycleNum));
+                    sumTotalTime.setText(String.format("%d:%02d (%d cycles)", mins, secs, cycleNum));
 
                     //Display longest retention time
                     mins = longestRetTime / 60;
                     secs = longestRetTime % 60;
                     sumLongestRetention.setText(String.format("%d:%02d / %ds", mins, secs, longestRetTime));
+
+                    //Display longest retention cycle
+                    sumLongestCycle.setText(String.format("%d", longestCycle));
+
                 }
             }
         });
