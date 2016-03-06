@@ -39,9 +39,9 @@
             android:layout_height="wrap_content"
             android:textSize="40dp"
             android:paddingTop="20dp"
-            android:text="Number of Cycles" />
+            android:text="Longest Retention" />
         <TextView
-            android:id="@+id/sumCycles"
+            android:id="@+id/sumLongestRetention"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textSize="40dp" />
@@ -50,9 +50,9 @@
             android:layout_height="wrap_content"
             android:textSize="40dp"
             android:paddingTop="20dp"
-            android:text="Longest Retention" />
+            android:text="Longest Cycle" />
         <TextView
-            android:id="@+id/sumLongestRetention"
+            android:id="@+id/sumLongestCycle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textSize="40dp" />
